@@ -12,9 +12,6 @@ from jacobi import paralel_deltasq
 parser = argparse.ArgumentParser()
 parser.add_argument("S", metavar="scale", type=int, nargs=1, help="scale factor")
 parser.add_argument("I", metavar="num_iter", type=int, nargs=1, help="number of iters")
-parser.add_argument(
-    "L", metavar="L_exp", type=int, nargs=1, help="work group size exp", default=8
-)
 
 
 def boundary_psi(psi, m, n, b, h, w):
@@ -61,9 +58,6 @@ if __name__ == "__main__":
     m = mbase * scale_factor
     n = nbase * scale_factor
 
-    G = m
-    L = 2 ** args.L[0]
-
     print(f"Running CFD on {m} x {n} grid")
 
     psi = np.zeros(((m + 2) * (n + 2)))
@@ -76,12 +70,10 @@ if __name__ == "__main__":
     t_start = time.time()
 
     for i in range(1, num_iter + 1):
-        # psi_tmp = jacobi_step(psi, m, n)
-        psi_tmp = paralel_jacobi(G, L, psi, m, n)
+        psi_tmp = jacobi_step(psi, m, n)
 
         if checkerr or i == num_iter:
-            error = paralel_deltasq(G, L, psi_tmp, psi, m, n)
-            # error = deltasq(psi_tmp, psi, m, n)
+            error = deltasq(psi_tmp, psi, m, n)
             error = math.sqrt(error)
             error /= bnorm
 
@@ -90,10 +82,9 @@ if __name__ == "__main__":
                 print(f"Converged on iter {i}")
                 break
 
-        # for i in range(1, m + 1):
-        #    for j in range(1, n + 1):
-        #        psi[i * (m + 2) + j] = psi_tmp[i * (m + 2) + j]
-        psi = paralel_copy(G, L, psi, psi_tmp, m, n)
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                psi[i * (m + 2) + j] = psi_tmp[i * (m + 2) + j]
 
         if i % print_freq == 0:
             if not checkerr:
